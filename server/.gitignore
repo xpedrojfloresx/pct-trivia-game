@@ -1,0 +1,9 @@
+# Dependencias
+node_modules/
+
+# Base de datos SQLite (se genera automáticamente al iniciar)
+data/
+
+# Variables de entorno
+.env
+.env.local

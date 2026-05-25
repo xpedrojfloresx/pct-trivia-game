@@ -1,0 +1,13 @@
+# Dependencias
+node_modules/
+
+# Build de producción
+dist/
+
+# Caché de Vite
+.vite/
+
+# Variables de entorno
+.env
+.env.local
+.env.*.local
