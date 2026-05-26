@@ -102,6 +102,7 @@ export default function PlayerPage() {
     return () => clearInterval(timerRef.current);
   }, [screen, answered, lastResult, questionIdx]);
 
+
   // Cambia el personaje al llegar una nueva pregunta (nunca el mismo dos veces seguidas)
   useEffect(() => {
     setCharIdx(prev => {
@@ -198,6 +199,15 @@ export default function PlayerPage() {
 
     return (
       <div className="game-screen" style={bgStyle}>
+
+        {/* Rellena la zona del notch con el color del header actual */}
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0,
+          height: 30,
+          background: theme.headerColor,
+          zIndex: 10,
+        }} />
 
         {/* Personaje animado de fondo (uno por pregunta) */}
         <div className="chars-layer" aria-hidden="true">
