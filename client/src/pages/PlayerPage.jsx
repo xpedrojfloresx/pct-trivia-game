@@ -194,7 +194,7 @@ export default function PlayerPage() {
     const isUrgent   = timeLeft <= 50;
 
     const bgStyle = theme.image
-      ? { backgroundImage: `url(${theme.image})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+      ? { backgroundImage: `url(${theme.image})`, backgroundSize: theme.bgSize ?? 'cover', backgroundPosition: theme.bgPosition ?? 'center', backgroundRepeat: 'no-repeat' }
       : { background: theme.gradient };
 
     return (
