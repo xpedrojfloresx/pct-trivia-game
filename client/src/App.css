@@ -25,7 +25,95 @@ body {
 }
 
 .container.home {
+  justify-content: flex-start;
+}
+
+.home-form {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   justify-content: center;
+  width: 100%;
+}
+
+.logo {
+  display: block;
+  width: 70%;
+  height: auto;
+  object-fit: contain;
+  margin: 0 auto 1.5rem;
+  margin-top: 3rem;
+}
+
+/* ── Navegación superior (Unirse / Crear) ───────────────── */
+.page-nav {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 2rem;
+  padding-top: 1rem;
+}
+
+.page-nav-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 14px;
+  padding: 14px 8px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.page-nav-btn.active {
+  border-color: #007AFF;
+  background: #f0f6ff;
+}
+
+.page-nav-icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 12px;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-nav-btn.active .page-nav-icon {
+  background: #007AFF;
+}
+
+.nav-shapes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  font-size: 17px;
+  line-height: 1;
+}
+
+.page-nav-btn.active .nav-shapes span {
+  color: white !important;
+}
+
+.nav-pencil {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.page-nav-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.page-nav-btn.active .page-nav-label {
+  color: #007AFF;
 }
 
 h1 {
@@ -691,6 +779,44 @@ h2 {
   line-height: 1;
 }
 .cat-btn { position: relative; }
+
+/* ── Selector de idioma ─────────────────────────────────── */
+.lang-switcher {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 1.25rem;
+}
+
+.lang-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 2px solid #e0e0e0;
+  background: white;
+  cursor: pointer;
+  font-family: 'Poppins', sans-serif;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.lang-btn.active {
+  border-color: #007AFF;
+  background: #007AFF;
+  color: white;
+}
+
+.lang-flag { font-size: 16px; line-height: 1; }
+
+.lang-code {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #555;
+}
+
+.lang-btn.active .lang-code { color: white; }
 
 /* ── z-index: personajes detrás del contenido ──────────── */
 .game-header,

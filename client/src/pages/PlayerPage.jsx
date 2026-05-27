@@ -1,6 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
 import { io } from 'socket.io-client';
+import { useNavigate } from 'react-router-dom';
 import { getTheme } from '../config/categories';
+import { useLanguage } from '../context/LanguageContext';
+import LangSwitcher from '../components/LangSwitcher';
+import { translateQuestion } from '../services/translator';
 
 const socket = io(`http://${window.location.hostname}:3001`);
 
@@ -10,12 +14,16 @@ const MC_COLORS = ['#e74c3c', '#2980b9', '#f39c12', '#27ae60'];
 const MC_SHAPES = ['▲', '◆', '●', '■'];
 
 export default function PlayerPage() {
+  const navigate = useNavigate();
+  const { lang, setLang, t } = useLanguage();
+
   const [screen, setScreen]                   = useState('home');
   const [playerName, setPlayerName]           = useState('');
   const [roomCode, setRoomCode]               = useState('');
   const [joinedCode, setJoinedCode]           = useState('');
   const [players, setPlayers]                 = useState([]);
-  const [currentQuestion, setCurrentQuestion] = useState(null);
+  const [currentQuestion, setCurrentQuestion] = useState(null);  // pregunta cruda (español)
+  const [displayQuestion, setDisplayQuestion] = useState(null);  // pregunta traducida
   const [totalQuestions, setTotalQuestions]   = useState(0);
   const [questionIdx, setQuestionIdx]         = useState(0);
   const [timeLeft, setTimeLeft]               = useState(TOTAL_TICKS);
@@ -102,7 +110,6 @@ export default function PlayerPage() {
     return () => clearInterval(timerRef.current);
   }, [screen, answered, lastResult, questionIdx]);
 
-
   // Cambia el personaje al llegar una nueva pregunta (nunca el mismo dos veces seguidas)
   useEffect(() => {
     setCharIdx(prev => {
@@ -111,6 +118,23 @@ export default function PlayerPage() {
       return next;
     });
   }, [questionIdx]);
+
+  // Muestra la pregunta inmediatamente y traduce en segundo plano
+  useEffect(() => {
+    if (!currentQuestion) { setDisplayQuestion(null); return; }
+
+    // Transición instantánea: muestra el texto original sin esperar la API
+    setDisplayQuestion(currentQuestion);
+
+    if (lang === 'es') return;
+
+    // Traducción en fondo: actualiza el texto cuando llega (sin bloquear)
+    let cancelled = false;
+    translateQuestion(currentQuestion, lang).then(translated => {
+      if (!cancelled) setDisplayQuestion(translated);
+    });
+    return () => { cancelled = true; };
+  }, [currentQuestion, lang]);
 
   // Emite timeout al llegar a 0, una sola vez por pregunta
   useEffect(() => {
@@ -121,7 +145,7 @@ export default function PlayerPage() {
   }, [timeLeft, screen, answered]);
 
   const handleJoin = () => {
-    if (!playerName.trim() || !roomCode.trim()) return alert('Ingresa nombre y código');
+    if (!playerName.trim() || !roomCode.trim()) return alert(t.alertNameRoom);
     socket.emit('join-room', { roomCode: roomCode.toUpperCase(), playerName });
   };
 
@@ -150,14 +174,36 @@ export default function PlayerPage() {
   if (screen === 'home') {
     return (
       <div className="container home">
-        <h1>🎮 Trivia</h1>
-        <input className="input" placeholder="Tu nombre" value={playerName}
-          onChange={e => setPlayerName(e.target.value)} />
-        <input className="input code-input" placeholder="Código de sala"
-          value={roomCode} maxLength={8}
-          onChange={e => setRoomCode(e.target.value.toUpperCase())}
-          onKeyDown={e => e.key === 'Enter' && handleJoin()} />
-        <button className="btn btn-success" onClick={handleJoin}>Unirse</button>
+        <nav className="page-nav">
+          <button className="page-nav-btn active">
+            <div className="page-nav-icon">
+              <div className="nav-shapes">
+                <span style={{ color: '#e74c3c' }}>▲</span>
+                <span style={{ color: '#2980b9' }}>◆</span>
+                <span style={{ color: '#f39c12' }}>●</span>
+                <span style={{ color: '#27ae60' }}>■</span>
+              </div>
+            </div>
+            <span className="page-nav-label">{t.navJoin}</span>
+          </button>
+          <button className="page-nav-btn" onClick={() => navigate('/guide')}>
+            <div className="page-nav-icon">
+              <span className="nav-pencil">✏️</span>
+            </div>
+            <span className="page-nav-label">{t.navCreate}</span>
+          </button>
+        </nav>
+        <img src="/logo-pct.png" alt="Trivia Game" className="logo" />
+        <LangSwitcher />
+        <div className="home-form">
+          <input className="input" placeholder={t.namePlaceholder} value={playerName}
+            onChange={e => setPlayerName(e.target.value)} />
+          <input className="input code-input" placeholder={t.roomCodePlaceholder}
+            value={roomCode} maxLength={8}
+            onChange={e => setRoomCode(e.target.value.toUpperCase())}
+            onKeyDown={e => e.key === 'Enter' && handleJoin()} />
+          <button className="btn btn-success" onClick={handleJoin}>{t.joinBtn}</button>
+        </div>
       </div>
     );
   }
@@ -166,9 +212,9 @@ export default function PlayerPage() {
   if (screen === 'waitingRoom') {
     return (
       <div className="container">
-        <h2>Sala {joinedCode}</h2>
+        <h2>{t.waitingRoomTitle(joinedCode)}</h2>
         <div className="players-list">
-          <p>Jugadores en sala ({players.length})</p>
+          <p>{t.playersInRoom(players.length)}</p>
           {players.map(p => (
             <div key={p.id} className="player-item">
               <span className="avatar">{p.name.charAt(0).toUpperCase()}</span>
@@ -177,7 +223,7 @@ export default function PlayerPage() {
           ))}
         </div>
         <p style={{ color: '#999', fontSize: 14, textAlign: 'center' }}>
-          Esperando que el guía inicie el juego...
+          {t.waitingForGuide}
         </p>
       </div>
     );
@@ -185,10 +231,10 @@ export default function PlayerPage() {
 
   // ── GAMEPLAY ─────────────────────────────────────────────
   if (screen === 'gameplay') {
-    if (!currentQuestion) return null;
+    if (!displayQuestion) return null;
 
-    const theme      = getTheme(currentQuestion.category);
-    const isTF       = currentQuestion.options.length === 2;
+    const theme      = getTheme(displayQuestion.category);
+    const isTF       = displayQuestion.options.length === 2;
     const secDisplay = (timeLeft / 10).toFixed(1);
     const pct        = (timeLeft / TOTAL_TICKS) * 100;
     const isUrgent   = timeLeft <= 50;
@@ -196,6 +242,8 @@ export default function PlayerPage() {
     const bgStyle = theme.image
       ? { backgroundImage: `url(${theme.image})`, backgroundSize: theme.bgSize ?? 'cover', backgroundPosition: theme.bgPosition ?? 'center', backgroundRepeat: 'no-repeat' }
       : { background: theme.gradient };
+
+    const q = displayQuestion;
 
     return (
       <div className="game-screen" style={bgStyle}>
@@ -217,17 +265,17 @@ export default function PlayerPage() {
         {/* Header */}
         <div className="game-header" style={{ background: theme.headerColor }}>
           <div className="game-header-side">
-            <span className="gh-label">CATEGORÍA</span>
+            <span className="gh-label">{t.categoryLabel}</span>
             <span className="gh-value">{theme.icon} {theme.label}</span>
           </div>
           <div className="gh-timer">
-            <span className="gh-label">TIEMPO RESTANTE</span>
+            <span className="gh-label">{t.timeLabel}</span>
             <span className={`gh-time ${isUrgent ? 'urgent' : ''}`}>
-              {secDisplay} <span className="gh-unit">SEG.</span>
+              {secDisplay} <span className="gh-unit">{t.secUnit}</span>
             </span>
           </div>
           <div className="game-header-side right">
-            <span className="gh-label">PREGUNTA</span>
+            <span className="gh-label">{t.questionLabel}</span>
             <span className="gh-value">{questionIdx + 1}/{totalQuestions}</span>
           </div>
         </div>
@@ -240,13 +288,13 @@ export default function PlayerPage() {
 
         {/* Cuerpo */}
         <div className="game-body">
-          <div className="question-bubble">{currentQuestion.question}</div>
+          <div className="question-bubble">{q.question}</div>
 
           {/* Opciones */}
           {isTF ? (
             // ── Verdadero / Falso ──
             <div className="options-tf">
-              {currentQuestion.options.map((opt, idx) => {
+              {q.options.map((opt, idx) => {
                 const tfColor = idx === 0 ? '#27ae60' : '#e74c3c';
                 const tfIcon  = idx === 0 ? '✓' : '✗';
                 let extra = '';
@@ -272,7 +320,7 @@ export default function PlayerPage() {
           ) : (
             // ── Opción múltiple 2×2 ──
             <div className="options-grid">
-              {currentQuestion.options.map((opt, idx) => {
+              {q.options.map((opt, idx) => {
                 let extra = '';
                 if (lastResult) {
                   if (idx === lastResult.correctIndex)                       extra = 'opt-correct';
@@ -296,11 +344,11 @@ export default function PlayerPage() {
           )}
 
           {answered && !lastResult && (
-            <p className="waiting-msg">Esperando al resto de jugadores...</p>
+            <p className="waiting-msg">{t.waitingOthers}</p>
           )}
           {lastResult && (
             <p className={`result-msg ${lastResult.wasCorrect ? 'ok' : 'fail'}`}>
-              {lastResult.wasCorrect ? `✓ ¡Correcto!  ${myScore} pts` : '✗ Incorrecto'}
+              {lastResult.wasCorrect ? t.correct(myScore) : t.incorrect}
             </p>
           )}
         </div>
@@ -313,20 +361,20 @@ export default function PlayerPage() {
     const medals = ['🥇', '🥈', '🥉'];
     return (
       <div className="container leaderboard">
-        <h1>Resultados</h1>
+        <h1>{t.results}</h1>
         {leaderboard.map((player, idx) => (
           <div key={player.id}
             className={`leaderboard-item rank-${idx}${player.id === socket.id ? ' is-me' : ''}`}>
             <span className="rank">{medals[idx] || `#${idx + 1}`}</span>
             <span className="name">
               {player.name}
-              {player.id === socket.id && <span className="you-tag"> (vos)</span>}
+              {player.id === socket.id && <span className="you-tag">{t.youTag}</span>}
             </span>
             <span className="score">{player.score} pts</span>
           </div>
         ))}
         <button className="btn btn-secondary" onClick={handleBackHome}>
-          Volver al inicio
+          {t.backHome}
         </button>
       </div>
     );

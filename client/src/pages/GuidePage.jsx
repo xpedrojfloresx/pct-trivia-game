@@ -1,10 +1,17 @@
 import { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
+import { useNavigate } from 'react-router-dom';
 import { CATEGORIES, getTheme } from '../config/categories';
+import { useLanguage } from '../context/LanguageContext';
+import LangSwitcher from '../components/LangSwitcher';
+import { translateQuestion } from '../services/translator';
 
 const socket = io(`http://${window.location.hostname}:3001`);
 
 export default function GuidePage() {
+  const navigate = useNavigate();
+  const { lang, t } = useLanguage();
+
   const [screen, setScreen]                     = useState('setup');
   const [guideName, setGuideName]               = useState('');
   const [roomCode, setRoomCode]                 = useState('');
@@ -12,7 +19,8 @@ export default function GuidePage() {
   const [selectedCategories, setSelectedCategories] = useState(new Set());
   const [scores, setScores]                     = useState([]);
   const [answeredIds, setAnsweredIds]           = useState(new Set());
-  const [currentQuestion, setCurrentQuestion]   = useState(null);
+  const [currentQuestion, setCurrentQuestion]   = useState(null); // cruda (español)
+  const [displayQuestion, setDisplayQuestion]   = useState(null); // traducida
   const [questionIdx, setQuestionIdx]           = useState(0);
   const [totalQuestions, setTotalQuestions]     = useState(0);
   const [leaderboard, setLeaderboard]           = useState([]);
@@ -66,7 +74,7 @@ export default function GuidePage() {
   }, []);
 
   const handleCreate = () => {
-    if (!guideName.trim()) return alert('Ingresa tu nombre');
+    if (!guideName.trim()) return alert(t.alertName);
     socket.emit('create-room', { playerName: guideName });
   };
 
@@ -79,7 +87,7 @@ export default function GuidePage() {
   };
 
   const handleStart = () => {
-    if (selectedCategories.size === 0) return alert('Elegí al menos una categoría');
+    if (selectedCategories.size === 0) return alert(t.alertCategory);
     socket.emit('start-game', { categories: [...selectedCategories] });
   };
 
@@ -95,6 +103,23 @@ export default function GuidePage() {
     setLeaderboard([]);
   };
 
+  // Muestra la pregunta inmediatamente y traduce en segundo plano
+  useEffect(() => {
+    if (!currentQuestion) { setDisplayQuestion(null); return; }
+
+    // Transición instantánea: muestra el texto original sin esperar la API
+    setDisplayQuestion(currentQuestion);
+
+    if (lang === 'es') return;
+
+    // Traducción en fondo: actualiza el texto cuando llega (sin bloquear)
+    let cancelled = false;
+    translateQuestion(currentQuestion, lang).then(translated => {
+      if (!cancelled) setDisplayQuestion(translated);
+    });
+    return () => { cancelled = true; };
+  }, [currentQuestion, lang]);
+
   // En el scoreboard el tema refleja la categoría de la pregunta actual
   const theme = getTheme(currentQuestion?.category);
 
@@ -102,11 +127,33 @@ export default function GuidePage() {
   if (screen === 'setup') {
     return (
       <div className="container home">
-        <h1>🎙️ Panel del Guía</h1>
-        <input className="input" placeholder="Tu nombre" value={guideName}
-          onChange={e => setGuideName(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleCreate()} />
-        <button className="btn btn-primary" onClick={handleCreate}>Crear sala</button>
+        <nav className="page-nav">
+          <button className="page-nav-btn" onClick={() => navigate('/')}>
+            <div className="page-nav-icon">
+              <div className="nav-shapes">
+                <span style={{ color: '#e74c3c' }}>▲</span>
+                <span style={{ color: '#2980b9' }}>◆</span>
+                <span style={{ color: '#f39c12' }}>●</span>
+                <span style={{ color: '#27ae60' }}>■</span>
+              </div>
+            </div>
+            <span className="page-nav-label">{t.navJoin}</span>
+          </button>
+          <button className="page-nav-btn active">
+            <div className="page-nav-icon">
+              <span className="nav-pencil">✏️</span>
+            </div>
+            <span className="page-nav-label">{t.navCreate}</span>
+          </button>
+        </nav>
+        <img src="/logo-pct.png" alt="Trivia Game" className="logo" />
+        <LangSwitcher />
+        <div className="home-form">
+          <input className="input" placeholder={t.namePlaceholder} value={guideName}
+            onChange={e => setGuideName(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleCreate()} />
+          <button className="btn btn-primary" onClick={handleCreate}>{t.createRoomBtn}</button>
+        </div>
       </div>
     );
   }
@@ -115,18 +162,18 @@ export default function GuidePage() {
   if (screen === 'waitingRoom') {
     return (
       <div className="container">
-        <h2>Sala creada</h2>
+        <h2>{t.roomCreated}</h2>
         <div className="code-box">{roomCode}</div>
         <p className="hint-text" style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-          Compartí este código con los jugadores
+          {t.shareCode}
         </p>
 
         {/* Selector de categorías (multi) */}
         <p style={{ fontSize: 13, color: '#666', marginBottom: '0.75rem', fontWeight: 600 }}>
-          ELEGÍ LAS CATEGORÍAS
+          {t.chooseCategories}
           {selectedCategories.size > 0 && (
             <span style={{ color: '#007AFF', marginLeft: 8 }}>
-              ({selectedCategories.size} sel. · hasta 12 preguntas)
+              {t.categoriesSelected(selectedCategories.size)}
             </span>
           )}
         </p>
@@ -149,10 +196,10 @@ export default function GuidePage() {
 
         {/* Jugadores */}
         <div className="players-list" style={{ marginTop: '1.5rem' }}>
-          <p>Jugadores conectados ({players.length})</p>
+          <p>{t.connectedPlayers(players.length)}</p>
           {players.length === 0 && (
             <p style={{ color: '#aaa', fontSize: 14, padding: '8px 0' }}>
-              Esperando jugadores...
+              {t.waitingPlayers}
             </p>
           )}
           {players.map(p => (
@@ -169,10 +216,13 @@ export default function GuidePage() {
           disabled={players.length === 0 || selectedCategories.size === 0}
         >
           {selectedCategories.size === 0
-            ? 'Elegí al menos una categoría...'
+            ? t.startBtnNoCategories
             : players.length === 0
-              ? 'Esperando jugadores...'
-              : `Iniciar — ${[...selectedCategories].map(k => CATEGORIES[k].icon).join(' ')} (${players.length} jugadores)`}
+              ? t.startBtnNoPlayers
+              : t.startBtn(
+                  [...selectedCategories].map(k => CATEGORIES[k].icon).join(' '),
+                  players.length
+                )}
         </button>
       </div>
     );
@@ -180,7 +230,7 @@ export default function GuidePage() {
 
   // ── SCOREBOARD EN TIEMPO REAL ────────────────────────────
   if (screen === 'scoreboard') {
-    const sorted       = [...scores].sort((a, b) => b.score - a.score);
+    const sorted        = [...scores].sort((a, b) => b.score - a.score);
     const answeredCount = answeredIds.size;
     const total         = scores.length;
 
@@ -188,17 +238,17 @@ export default function GuidePage() {
       <div className="guide-scoreboard">
         <div className="scoreboard-header">
           <span className="q-counter" style={{ color: theme.headerColor }}>
-            {theme.icon} {theme.label} — Pregunta {questionIdx + 1}/{totalQuestions}
+            {t.questionCounter(theme.icon, theme.label, questionIdx + 1, totalQuestions)}
           </span>
           <span className={`answered-pill ${answeredCount === total && total > 0 ? 'full' : ''}`}
             style={answeredCount === total && total > 0 ? { background: theme.headerColor } : {}}>
-            {answeredCount}/{total} respondieron
+            {t.answeredLabel(answeredCount, total)}
           </span>
         </div>
 
-        {currentQuestion && (
+        {displayQuestion && (
           <div className="current-question-box" style={{ background: theme.headerColor }}>
-            {currentQuestion.question}
+            {displayQuestion.question}
           </div>
         )}
 
@@ -227,7 +277,7 @@ export default function GuidePage() {
     return (
       <div className="guide-scoreboard">
         <h1 style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          {theme.icon} Resultados Finales — {theme.label}
+          {theme.icon} {t.finalResultsTitle} — {theme.label}
         </h1>
         <div className="scoreboard-list">
           {leaderboard.map((player, idx) => (
@@ -242,7 +292,7 @@ export default function GuidePage() {
         </div>
         <button className="btn btn-secondary" onClick={handleReset}
           style={{ marginTop: '2rem' }}>
-          Nueva partida
+          {t.newGame}
         </button>
       </div>
     );
