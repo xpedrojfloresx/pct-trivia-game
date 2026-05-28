@@ -5,6 +5,7 @@ import { getTheme } from '../config/categories';
 import { useLanguage } from '../context/LanguageContext';
 import LangSwitcher from '../components/LangSwitcher';
 import { translateQuestion } from '../services/translator';
+import LogoBanner from '../components/LogoBanner';
 
 const socket = io(`http://${window.location.hostname}:3001`);
 
@@ -173,59 +174,75 @@ export default function PlayerPage() {
   // ── HOME ────────────────────────────────────────────────
   if (screen === 'home') {
     return (
-      <div className="container home">
-        <nav className="page-nav">
-          <button className="page-nav-btn active">
-            <div className="page-nav-icon">
-              <div className="nav-shapes">
-                <span style={{ color: '#e74c3c' }}>▲</span>
-                <span style={{ color: '#2980b9' }}>◆</span>
-                <span style={{ color: '#f39c12' }}>●</span>
-                <span style={{ color: '#27ae60' }}>■</span>
+      <>
+        <LogoBanner />
+        <div className="container home">
+          <nav className="page-nav">
+            <button className="page-nav-btn active">
+              <div className="page-nav-icon">
+                <div className="nav-shapes">
+                  <span style={{ color: '#e74c3c' }}>▲</span>
+                  <span style={{ color: '#2980b9' }}>◆</span>
+                  <span style={{ color: '#f39c12' }}>●</span>
+                  <span style={{ color: '#27ae60' }}>■</span>
+                </div>
               </div>
-            </div>
-            <span className="page-nav-label">{t.navJoin}</span>
-          </button>
-          <button className="page-nav-btn" onClick={() => navigate('/guide')}>
-            <div className="page-nav-icon">
-              <span className="nav-pencil">✏️</span>
-            </div>
-            <span className="page-nav-label">{t.navCreate}</span>
-          </button>
-        </nav>
-        <img src="/logo-pct.png" alt="Trivia Game" className="logo" />
-        <LangSwitcher />
-        <div className="home-form">
-          <input className="input" placeholder={t.namePlaceholder} value={playerName}
-            onChange={e => setPlayerName(e.target.value)} />
-          <input className="input code-input" placeholder={t.roomCodePlaceholder}
-            value={roomCode} maxLength={8}
-            onChange={e => setRoomCode(e.target.value.toUpperCase())}
-            onKeyDown={e => e.key === 'Enter' && handleJoin()} />
-          <button className="btn btn-success" onClick={handleJoin}>{t.joinBtn}</button>
+              <span className="page-nav-label">{t.navJoin}</span>
+            </button>
+            <button className="page-nav-btn" onClick={() => navigate('/guide')}>
+              <div className="page-nav-icon">
+                <span className="nav-pencil">✏️</span>
+              </div>
+              <span className="page-nav-label">{t.navCreate}</span>
+            </button>
+          </nav>
+          <img src="/logo-pct.png" alt="Trivia Game" className="logo" />
+          <LangSwitcher />
+          <div className="home-form">
+            <input
+              className="input"
+              placeholder={t.namePlaceholder}
+              value={playerName}
+              onChange={e => setPlayerName(e.target.value)}
+              onBlur={() => window.scrollTo(0, 0)}
+            />
+            <input
+              className="input code-input"
+              placeholder={t.roomCodePlaceholder}
+              value={roomCode}
+              maxLength={8}
+              onChange={e => setRoomCode(e.target.value.toUpperCase())}
+              onKeyDown={e => e.key === 'Enter' && handleJoin()}
+              onBlur={() => window.scrollTo(0, 0)}
+            />
+            <button className="btn btn-success" onClick={handleJoin}>{t.joinBtn}</button>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   // ── WAITING ROOM ─────────────────────────────────────────
   if (screen === 'waitingRoom') {
     return (
-      <div className="container">
-        <h2>{t.waitingRoomTitle(joinedCode)}</h2>
-        <div className="players-list">
-          <p>{t.playersInRoom(players.length)}</p>
-          {players.map(p => (
-            <div key={p.id} className="player-item">
-              <span className="avatar">{p.name.charAt(0).toUpperCase()}</span>
-              <span>{p.name}</span>
-            </div>
-          ))}
+      <>
+        <LogoBanner />
+        <div className="container">
+          <h2>{t.waitingRoomTitle(joinedCode)}</h2>
+          <div className="players-list">
+            <p>{t.playersInRoom(players.length)}</p>
+            {players.map(p => (
+              <div key={p.id} className="player-item">
+                <span className="avatar">{p.name.charAt(0).toUpperCase()}</span>
+                <span>{p.name}</span>
+              </div>
+            ))}
+          </div>
+          <p style={{ color: '#999', fontSize: 14, textAlign: 'center' }}>
+            {t.waitingForGuide}
+          </p>
         </div>
-        <p style={{ color: '#999', fontSize: 14, textAlign: 'center' }}>
-          {t.waitingForGuide}
-        </p>
-      </div>
+      </>
     );
   }
 
@@ -360,23 +377,26 @@ export default function PlayerPage() {
   if (screen === 'leaderboard') {
     const medals = ['🥇', '🥈', '🥉'];
     return (
-      <div className="container leaderboard">
-        <h1>{t.results}</h1>
-        {leaderboard.map((player, idx) => (
-          <div key={player.id}
-            className={`leaderboard-item rank-${idx}${player.id === socket.id ? ' is-me' : ''}`}>
-            <span className="rank">{medals[idx] || `#${idx + 1}`}</span>
-            <span className="name">
-              {player.name}
-              {player.id === socket.id && <span className="you-tag">{t.youTag}</span>}
-            </span>
-            <span className="score">{player.score} pts</span>
-          </div>
-        ))}
-        <button className="btn btn-secondary" onClick={handleBackHome}>
-          {t.backHome}
-        </button>
-      </div>
+      <>
+        <LogoBanner />
+        <div className="container leaderboard">
+          <h1>{t.results}</h1>
+          {leaderboard.map((player, idx) => (
+            <div key={player.id}
+              className={`leaderboard-item rank-${idx}${player.id === socket.id ? ' is-me' : ''}`}>
+              <span className="rank">{medals[idx] || `#${idx + 1}`}</span>
+              <span className="name">
+                {player.name}
+                {player.id === socket.id && <span className="you-tag">{t.youTag}</span>}
+              </span>
+              <span className="score">{player.score} pts</span>
+            </div>
+          ))}
+          <button className="btn btn-secondary" onClick={handleBackHome}>
+            {t.backHome}
+          </button>
+        </div>
+      </>
     );
   }
 

@@ -43,8 +43,6 @@ export default function LogoBanner() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        position: "relative",
-        flexShrink: 0,
       }}
     >
       <img

@@ -9,16 +9,15 @@ const PlayerPage = lazy(() => import('./pages/PlayerPage'));
 
 export default function App() {
   return (
-    <LanguageProvider>
-      <BrowserRouter>
-        <LogoBanner />
+  <LanguageProvider>
+    <BrowserRouter>
         <Suspense fallback={null}>
           <Routes>
             <Route path="/" element={<PlayerPage />} />
             <Route path="/guide" element={<GuidePage />} />
           </Routes>
         </Suspense>
-      </BrowserRouter>
-    </LanguageProvider>
-  );
+    </BrowserRouter>
+  </LanguageProvider>
+);
 }
