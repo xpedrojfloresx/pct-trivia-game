@@ -2,21 +2,22 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { LanguageProvider } from './context/LanguageContext';
 import './App.css';
+import LogoBanner from "./components/LogoBanner";
 
 const GuidePage = lazy(() => import('./pages/GuidePage'));
 const PlayerPage = lazy(() => import('./pages/PlayerPage'));
 
 export default function App() {
   return (
-    <LanguageProvider>
-      <BrowserRouter>
+  <LanguageProvider>
+    <BrowserRouter>
         <Suspense fallback={null}>
           <Routes>
             <Route path="/" element={<PlayerPage />} />
             <Route path="/guide" element={<GuidePage />} />
           </Routes>
         </Suspense>
-      </BrowserRouter>
-    </LanguageProvider>
-  );
+    </BrowserRouter>
+  </LanguageProvider>
+);
 }
