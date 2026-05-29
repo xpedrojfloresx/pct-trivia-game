@@ -36,6 +36,10 @@ export default function PlayerPage() {
   const [charIdx, setCharIdx]               = useState(() => Math.ceil(Math.random() * 5));
   const timerRef       = useRef(null);
   const timeoutSentRef = useRef(false);
+  const [email, setEmail]                   = useState('');
+  const [emailSent, setEmailSent]           = useState(false);
+  const [privacyChecked, setPrivacyChecked] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
   useEffect(() => {
     socket.on('joined-room', ({ code }) => {
@@ -392,13 +396,177 @@ export default function PlayerPage() {
               <span className="score">{player.score} pts</span>
             </div>
           ))}
-          <button className="btn btn-secondary" onClick={handleBackHome}>
-            {t.backHome}
+          <button className="btn btn-secondary" onClick={() => {
+            setEmailSent(false);
+            setEmail('');
+            setScreen('thankyou');
+            setPrivacyChecked(false);
+          }}>
+            {t.continueBtn}
           </button>
         </div>
       </>
     );
   }
+
+  // ── THANK YOU ──────────────────────────────────────────────
+if (screen === 'thankyou') {
+  const ty = {
+    es: {
+      title: '¡Gracias por participar!',
+      subtitle: 'Esperamos que hayas disfrutado la visita al Museo Plaza Cielo Tierra.',
+      emailPlaceholder: 'Tu correo electrónico (opcional)',
+      checkboxPre: 'Acepto recibir notificaciones y la ',
+      privacyLink: 'política de privacidad',
+      checkboxPost: '.',
+      sendBtn: 'Enviar',
+      successMsg: '¡Gracias por suscribirte! Te enviaremos novedades del museo.',
+      backHome: 'Volver al inicio',
+      privacyTitle: 'Política de Privacidad',
+      privacyBody: 'Tu correo electrónico será utilizado exclusivamente para informarte sobre futuros eventos organizados por el Museo Plaza Cielo Tierra. No compartiremos tus datos con terceros ni los usaremos para ningún otro fin. Podés darte de baja en cualquier momento.',
+      close: 'Cerrar',
+    },
+    en: {
+      title: 'Thank you for participating!',
+      subtitle: 'We hope you enjoyed your visit to the Plaza Cielo Tierra Museum.',
+      emailPlaceholder: 'Your email address (optional)',
+      checkboxPre: 'I agree to receive notifications and the ',
+      privacyLink: 'privacy policy',
+      checkboxPost: '.',
+      sendBtn: 'Send',
+      successMsg: 'Thanks for subscribing! We\'ll keep you updated on museum news.',
+      backHome: 'Back to home',
+      privacyTitle: 'Privacy Policy',
+      privacyBody: 'Your email address will be used exclusively to inform you about future events organized by the Plaza Cielo Tierra Museum. We will not share your data with third parties or use it for any other purpose. You can unsubscribe at any time.',
+      close: 'Close',
+    },
+    pt: {
+      title: 'Obrigado por participar!',
+      subtitle: 'Esperamos que tenha aproveitado a visita ao Museu Plaza Cielo Tierra.',
+      emailPlaceholder: 'Seu e-mail (opcional)',
+      checkboxPre: 'Aceito receber notificações e a ',
+      privacyLink: 'política de privacidade',
+      checkboxPost: '.',
+      sendBtn: 'Enviar',
+      successMsg: 'Obrigado por se inscrever! Enviaremos novidades do museu.',
+      backHome: 'Voltar ao início',
+      privacyTitle: 'Política de Privacidade',
+      privacyBody: 'O seu endereço de e-mail será utilizado exclusivamente para informá-lo sobre eventos futuros organizados pelo Museu Plaza Cielo Tierra. Não compartilharemos seus dados com terceiros nem os usaremos para nenhum outro fim. Você pode cancelar a inscrição a qualquer momento.',
+      close: 'Fechar',
+    },
+  }[lang] ?? {};
+
+  const handleSend = () => {
+    if (!privacyChecked || emailSent) return;
+    // Aquí podés conectar el envío real al backend
+    console.log('Email a guardar:', email);
+    setEmailSent(true);
+  };
+
+  return (
+    <>
+      <LogoBanner />
+      <div className="container" style={{ justifyContent: 'center', gap: '1.25rem' }}>
+
+        {/* Modal política de privacidad */}
+        {showPrivacyModal && (
+          <div style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 999, padding: '1.5rem',
+          }}>
+            <div style={{
+              background: 'white', borderRadius: '16px', padding: '1.5rem',
+              maxWidth: '340px', width: '100%', boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+            }}>
+              <h3 style={{ marginBottom: '0.75rem', fontSize: '16px', fontWeight: 700 }}>
+                {ty.privacyTitle}
+              </h3>
+              <p style={{ fontSize: '14px', color: '#555', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+                {ty.privacyBody}
+              </p>
+              <button className="btn btn-primary" onClick={() => setShowPrivacyModal(false)}>
+                {ty.close}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Contenido */}
+        <img src="/logo-pct.png" alt="Plaza Cielo Tierra" className="logo"
+          style={{ marginTop: 0 }} />
+
+        <div style={{ textAlign: 'center' }}>
+          <h1 style={{ fontSize: '22px', marginBottom: '0.5rem' }}>{ty.title}</h1>
+          <p style={{ fontSize: '14px', color: '#666', lineHeight: 1.5 }}>{ty.subtitle}</p>
+        </div>
+
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <input
+            className="input"
+            type="email"
+            placeholder={ty.emailPlaceholder}
+            value={email}
+            disabled={emailSent}
+            onChange={e => setEmail(e.target.value)}
+            onBlur={() => window.scrollTo(0, 0)}
+            style={{ opacity: emailSent ? 0.5 : 1 }}
+          />
+
+          <label style={{
+            display: 'flex', alignItems: 'flex-start', gap: '10px',
+            fontSize: '13px', color: '#444', lineHeight: 1.5, cursor: 'pointer',
+          }}>
+            <input
+              type="checkbox"
+              checked={privacyChecked}
+              disabled={emailSent}
+              onChange={e => setPrivacyChecked(e.target.checked)}
+              style={{ marginTop: '2px', flexShrink: 0, width: '16px', height: '16px' }}
+            />
+            <span>
+              {ty.checkboxPre}
+              <button
+                onClick={() => setShowPrivacyModal(true)}
+                style={{
+                  background: 'none', border: 'none', padding: 0,
+                  color: '#007AFF', textDecoration: 'underline',
+                  fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                {ty.privacyLink}
+              </button>
+              {ty.checkboxPost}
+            </span>
+          </label>
+
+          {emailSent ? (
+            <div style={{
+              background: '#d4edda', color: '#155724', border: '1px solid #c3e6cb',
+              borderRadius: '8px', padding: '12px', textAlign: 'center',
+              fontSize: '14px', fontWeight: 500,
+            }}>
+              ✅ {ty.successMsg}
+            </div>
+          ) : (
+            <button
+              className="btn btn-primary"
+              onClick={handleSend}
+              disabled={!privacyChecked}
+            >
+              {ty.sendBtn}
+            </button>
+          )}
+        </div>
+
+        <button className="btn btn-secondary" onClick={handleBackHome}>
+          {ty.backHome}
+        </button>
+
+      </div>
+    </>
+  );
+}
 
   return null;
 }
