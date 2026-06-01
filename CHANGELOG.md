@@ -87,4 +87,3 @@ La sala de espera, el scoreboard y el leaderboard final del guía ahora permiten
 
 - El guía ya no necesita ingresar su nombre para crear la sala — no se usaba en ningún lado
 - El QR usa `window.location.origin` para funcionar en cualquier entorno sin configuración
-- Cleanup del `.gitignore` para excluir carpetas de herramientas de IA (`.claude/`, `.claude-flow/`)
