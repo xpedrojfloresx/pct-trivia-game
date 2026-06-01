@@ -10,6 +10,17 @@ body {
   font-family: 'Poppins', sans-serif;
   background: #f5f5f5;
   overflow: hidden;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  touch-action: manipulation; /* evita doble-tap zoom */
+}
+
+.container, .game-screen, .guide-scoreboard {
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* ── Player layout (mobile, 400px) ─────────────────────── */
@@ -51,7 +62,7 @@ body {
   gap: 12px;
   width: 100%;
   margin-bottom: 2rem;
-  padding-top: 1rem;
+  padding-top: 0;
 }
 
 .page-nav-btn {
@@ -185,10 +196,80 @@ h2 {
   padding: 1rem;
   border-radius: 8px;
   text-align: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
   font-size: 32px;
   font-weight: 500;
   letter-spacing: 4px;
+}
+
+.qr-wrapper {
+  display: flex;
+  justify-content: center;
+  padding: 1rem;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  margin-bottom: 0.75rem;
+}
+
+.players-limit-badge {
+  font-size: 13px;
+  font-weight: 600;
+  color: #007AFF;
+  background: #f0f6ff;
+  border: 1px solid #cce0ff;
+  border-radius: 20px;
+  padding: 2px 10px;
+}
+.players-limit-badge.full {
+  color: #e74c3c;
+  background: #fff0f0;
+  border-color: #ffc0c0;
+}
+
+.max-players-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8f8f8;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 1rem;
+}
+.max-players-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #555;
+}
+.max-players-stepper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.stepper-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid #ddd;
+  background: white;
+  font-size: 18px;
+  font-weight: 700;
+  color: #333;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: background 0.15s;
+}
+.stepper-btn:hover { background: #f0f0f0; }
+.stepper-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #007AFF;
+  min-width: 28px;
+  text-align: center;
 }
 
 .players-list {
@@ -905,4 +986,377 @@ h2 {
   0%   { transform: rotate(-28deg); }
   50%  { transform: rotate(22deg);  }
   100% { transform: rotate(-28deg); }
+}
+
+/* ── Admin Panel ──────────────────────────────────────── */
+
+.adm-login {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  padding: 1rem;
+}
+.adm-login-box {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.adm-login-title { font-size: 1.6rem; font-weight: 700; color: #1a1a1a; margin: 0 0 0.25rem; }
+.adm-login-sub   { color: #999; font-size: 0.9rem; margin: 0 0 0.5rem; }
+.adm-login-input { margin-bottom: 0 !important; }
+
+.adm-card {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 14px;
+  padding: 1.5rem;
+}
+.adm-card-flat {
+  background: white;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.adm-page {
+  min-height: 100vh;
+  background: #f5f5f5;
+  color: #1a1a1a;
+}
+
+.adm-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  gap: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.adm-topbar-title { font-weight: 700; font-size: 1.05rem; color: #1a1a1a; }
+.adm-topbar-count { font-weight: 400; color: #999; font-size: 0.9rem; }
+.adm-topbar-right { display: flex; gap: 0.5rem; flex-shrink: 0; }
+
+.adm-btn-inline {
+  width: auto !important;
+  margin-bottom: 0 !important;
+  padding: 8px 16px !important;
+  font-size: 14px !important;
+}
+
+.adm-body { padding: 1rem 1.5rem 3rem; max-width: 1100px; margin: 0 auto; }
+
+.adm-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.adm-filter-btn {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 2px solid #e0e0e0;
+  background: white;
+  color: #666;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: 'Poppins', sans-serif;
+  transition: all 0.15s;
+}
+.adm-filter-btn:hover { border-color: #bbb; color: #333; }
+.adm-filter-btn.active { border-color: #007AFF; background: #f0f6ff; color: #007AFF; font-weight: 600; }
+
+.adm-filter-btn.adm-filter-fuego.active  { border-color: #ff4757; background: #fff0f1; color: #cc2233; }
+.adm-filter-btn.adm-filter-aire.active   { border-color: #00aabb; background: #e8fafb; color: #007788; }
+.adm-filter-btn.adm-filter-agua.active   { border-color: #0984e3; background: #eaf4fd; color: #0660aa; }
+.adm-filter-btn.adm-filter-tierra.active { border-color: #00b894; background: #e6faf6; color: #007a60; }
+.adm-filter-btn.adm-filter-bonus.active  { border-color: #a55eea; background: #f5eeff; color: #7c3bbf; }
+
+.adm-error-bar {
+  padding: 0.6rem 1rem;
+  background: #fff0f0;
+  border: 1px solid #ffc0c0;
+  border-radius: 8px;
+  color: #c0392b;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.adm-table-wrap { overflow-x: auto; }
+.adm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+.adm-table th {
+  text-align: left;
+  padding: 0.65rem 0.9rem;
+  color: #999;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid #e8e8e8;
+  background: white;
+}
+.adm-table td {
+  padding: 0.75rem 0.9rem;
+  border-bottom: 1px solid #f0f0f0;
+  vertical-align: middle;
+  color: #333;
+}
+.adm-table tr:last-child td { border-bottom: none; }
+.adm-table tr:hover td { background: #fafafa; }
+
+.adm-td-id       { color: #bbb; width: 48px; font-size: 0.8rem; }
+.adm-td-type     { color: #999; width: 56px; font-family: monospace; font-size: 0.8rem; }
+.adm-td-question { max-width: 380px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.adm-td-correct  { color: #27ae60; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+.adm-td-actions  { width: 80px; text-align: right; white-space: nowrap; }
+.adm-empty       { text-align: center; color: #bbb; padding: 2.5rem; font-size: 0.9rem; }
+
+.adm-action-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+.adm-action-btn:hover { background: #f0f0f0; }
+
+.adm-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.adm-badge-fuego  { background: #ffe0e3; color: #cc2233; }
+.adm-badge-aire   { background: #d9f5f8; color: #007788; }
+.adm-badge-agua   { background: #d6eeff; color: #0660aa; }
+.adm-badge-tierra { background: #d4f5ec; color: #007a60; }
+.adm-badge-bonus  { background: #ecdeff; color: #7c3bbf; }
+
+/* Overlay + Form Modal */
+.adm-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100;
+  padding: 1rem;
+}
+.adm-form {
+  width: 100%;
+  max-width: 540px;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 2rem;
+}
+.adm-form h2 { margin-bottom: 0.5rem; font-size: 1.25rem; }
+.adm-form-footer {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+.adm-btn-half {
+  flex: 1;
+  width: auto !important;
+  margin-bottom: 0 !important;
+}
+
+.adm-label {
+  font-size: 0.8rem;
+  color: #666;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: -0.25rem;
+}
+.adm-label-hint { font-size: 0.75rem; color: #bbb; text-transform: none; letter-spacing: 0; font-weight: 400; }
+
+.adm-select {
+  margin-bottom: 0 !important;
+  cursor: pointer;
+}
+.adm-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 15px;
+  font-family: 'Poppins', sans-serif;
+  resize: vertical;
+  outline: none;
+  color: #1a1a1a;
+}
+.adm-textarea:focus { border-color: #007AFF; }
+
+.adm-type-toggle { display: flex; gap: 0.5rem; }
+.adm-type-btn {
+  flex: 1;
+  padding: 10px;
+  background: #f5f5f5;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  color: #666;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+.adm-type-btn:hover  { border-color: #bbb; color: #333; }
+.adm-type-btn.active { border-color: #007AFF; background: #f0f6ff; color: #007AFF; font-weight: 700; }
+
+.adm-option-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  transition: border-color 0.15s, background 0.15s;
+}
+.adm-option-row.is-correct { border-color: #34C759; background: #f0fdf4; }
+.adm-option-row input[type="radio"] { accent-color: #34C759; cursor: pointer; flex-shrink: 0; }
+.adm-option-input { flex: 1; margin-bottom: 0 !important; }
+.adm-correct-mark { color: #27ae60; font-weight: 700; font-size: 0.8rem; white-space: nowrap; }
+
+.adm-error {
+  color: #c0392b;
+  background: #fff0f0;
+  border: 1px solid #ffc0c0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.adm-btn-danger {
+  background: #e74c3c;
+  color: white;
+}
+.adm-btn-danger:hover { background: #c0392b; }
+
+/* Delete confirm */
+.adm-confirm {
+  max-width: 340px;
+  width: 100%;
+  text-align: center;
+  padding: 2rem;
+}
+.adm-confirm p { font-size: 1rem; margin: 0 0 1.5rem; color: #333; }
+.adm-confirm-actions { display: flex; gap: 0.75rem; }
+
+/* ── Admin Responsive (mobile) ───────────────────────── */
+
+@media (max-width: 640px) {
+  .adm-body { padding: 0.75rem 0.75rem 3rem; }
+
+  /* Topbar: stack on very small screens */
+  .adm-topbar { flex-wrap: wrap; gap: 0.5rem; padding: 0.75rem 1rem; }
+  .adm-topbar-title { font-size: 0.95rem; }
+  .adm-topbar-right { width: 100%; justify-content: flex-end; }
+  .adm-btn-inline { padding: 7px 12px !important; font-size: 13px !important; }
+
+  /* Filters: horizontal scroll instead of wrap */
+  .adm-filters {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+    gap: 0.4rem;
+  }
+  .adm-filters::-webkit-scrollbar { display: none; }
+  .adm-filter-btn { white-space: nowrap; flex-shrink: 0; font-size: 12px; padding: 5px 12px; }
+
+  /* Card on desktop → stacked rows on mobile */
+  .adm-table-wrap { overflow-x: visible; padding: 0; }
+  .adm-card.adm-table-wrap { border: none; background: transparent; padding: 0; }
+
+  .adm-table thead { display: none; }
+
+  .adm-table,
+  .adm-table tbody,
+  .adm-table tr,
+  .adm-table td { display: block; width: 100%; }
+
+  .adm-table tr {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    margin-bottom: 0.6rem;
+    padding: 0.75rem 1rem;
+    position: relative;
+  }
+  .adm-table tr:hover td { background: transparent; }
+
+  .adm-table td {
+    border: none;
+    padding: 3px 0;
+    color: #333;
+  }
+
+  /* Label via data-label */
+  .adm-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #bbb;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 1px;
+  }
+
+  /* Hide ID on mobile */
+  .adm-td-id { display: none !important; }
+
+  .adm-td-type { width: auto; }
+  .adm-td-question { white-space: normal; max-width: 100%; font-size: 0.9rem; }
+  .adm-td-correct  { max-width: 100%; white-space: normal; }
+
+  /* Actions row: absolute top-right */
+  .adm-td-actions {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: auto;
+    text-align: right;
+    padding: 0;
+  }
+  .adm-td-actions::before { display: none !important; }
+
+  /* Full-screen modal on mobile */
+  .adm-overlay { align-items: flex-end; padding: 0; }
+  .adm-form {
+    border-radius: 20px 20px 0 0;
+    max-height: 92vh;
+    max-width: 100%;
+    border-bottom: none;
+  }
+  .adm-confirm {
+    border-radius: 20px 20px 0 0;
+    max-width: 100%;
+    border-bottom: none;
+  }
+
+  /* Login on mobile: no shadow, flush */
+  .adm-login-box { border: none; background: transparent; padding: 0; }
+}
+
+@media (max-width: 380px) {
+  .adm-topbar-title { font-size: 0.85rem; }
+  .adm-table td { font-size: 0.82rem; }
 }

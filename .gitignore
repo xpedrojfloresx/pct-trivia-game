@@ -20,3 +20,7 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# Claude Code / IA
+.claude/
+.claude-flow/

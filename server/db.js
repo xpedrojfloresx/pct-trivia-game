@@ -10,50 +10,148 @@ let db;
 export function initDB() {
   return new Promise((resolve, reject) => {
     db = new sqlite3.Database(dbPath, (err) => {
-      if (err) {
-        console.error('Error opening DB:', err);
-        reject(err);
-      } else {
-        console.log(`Connected to SQLite at ${dbPath}`);
-        
-        db.serialize(() => {
-          db.run(`
-            CREATE TABLE IF NOT EXISTS questions (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              question TEXT NOT NULL,
-              options TEXT NOT NULL,
-              correct INTEGER NOT NULL,
-              createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-          `, (err) => {
-            if (err) console.error('Error creating questions table:', err);
-          });
+      if (err) { console.error('Error opening DB:', err); reject(err); return; }
+      console.log(`Connected to SQLite at ${dbPath}`);
 
-          db.run(`
-            CREATE TABLE IF NOT EXISTS rooms (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              code TEXT UNIQUE NOT NULL,
-              createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-              finishedAt DATETIME
-            )
-          `, (err) => {
-            if (err) console.error('Error creating rooms table:', err);
-          });
+      db.serialize(() => {
+        db.run(`
+          CREATE TABLE IF NOT EXISTS questions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            category TEXT NOT NULL DEFAULT 'BONUS',
+            type TEXT NOT NULL DEFAULT 'mc',
+            question TEXT NOT NULL,
+            options TEXT NOT NULL,
+            correct INTEGER NOT NULL,
+            createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
 
-          db.run(`
-            CREATE TABLE IF NOT EXISTS players (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              roomCode TEXT NOT NULL,
-              name TEXT NOT NULL,
-              score INTEGER DEFAULT 0,
-              FOREIGN KEY (roomCode) REFERENCES rooms(code)
-            )
-          `, (err) => {
-            if (err) console.error('Error creating players table:', err);
-            resolve();
-          });
+        // Migration: add columns if DB existed with old schema (errors silently ignored)
+        db.run(`ALTER TABLE questions ADD COLUMN category TEXT NOT NULL DEFAULT 'BONUS'`, () => {});
+        db.run(`ALTER TABLE questions ADD COLUMN type TEXT NOT NULL DEFAULT 'mc'`, () => {});
+
+        db.run(`
+          CREATE TABLE IF NOT EXISTS rooms (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code TEXT UNIQUE NOT NULL,
+            createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+            finishedAt DATETIME
+          )
+        `);
+
+        db.run(`
+          CREATE TABLE IF NOT EXISTS players (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            roomCode TEXT NOT NULL,
+            name TEXT NOT NULL,
+            score INTEGER DEFAULT 0,
+            FOREIGN KEY (roomCode) REFERENCES rooms(code)
+          )
+        `, (err) => {
+          if (err) reject(err);
+          else resolve();
         });
+      });
+    });
+  });
+}
+
+export function countQuestions() {
+  return new Promise((resolve, reject) => {
+    db.get('SELECT COUNT(*) as count FROM questions', (err, row) => {
+      if (err) reject(err);
+      else resolve(row.count);
+    });
+  });
+}
+
+export function getDistinctCategoryCount() {
+  return new Promise((resolve, reject) => {
+    db.get('SELECT COUNT(DISTINCT category) as count FROM questions', (err, row) => {
+      if (err) reject(err);
+      else resolve(row.count);
+    });
+  });
+}
+
+export function clearQuestions() {
+  return new Promise((resolve, reject) => {
+    db.run('DELETE FROM questions', (err) => {
+      if (err) reject(err);
+      else resolve();
+    });
+  });
+}
+
+export function seedQuestions(questions) {
+  return new Promise((resolve, reject) => {
+    const stmt = db.prepare(
+      'INSERT INTO questions (category, type, question, options, correct) VALUES (?, ?, ?, ?, ?)'
+    );
+    db.serialize(() => {
+      questions.forEach(q => {
+        stmt.run(q.category, q.type, q.question, JSON.stringify(q.options), q.correct);
+      });
+      stmt.finalize((err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+  });
+}
+
+export function getGameQuestions() {
+  return new Promise((resolve, reject) => {
+    db.all('SELECT * FROM questions', (err, rows) => {
+      if (err) reject(err);
+      else resolve((rows || []).map(row => ({ ...row, options: JSON.parse(row.options) })));
+    });
+  });
+}
+
+export function getAllAdminQuestions(category) {
+  return new Promise((resolve, reject) => {
+    const query = category
+      ? 'SELECT * FROM questions WHERE category = ? ORDER BY category, id'
+      : 'SELECT * FROM questions ORDER BY category, id';
+    db.all(query, category ? [category] : [], (err, rows) => {
+      if (err) reject(err);
+      else resolve((rows || []).map(row => ({ ...row, options: JSON.parse(row.options) })));
+    });
+  });
+}
+
+export function createAdminQuestion(category, type, question, options, correct) {
+  return new Promise((resolve, reject) => {
+    db.run(
+      'INSERT INTO questions (category, type, question, options, correct) VALUES (?, ?, ?, ?, ?)',
+      [category, type, question, JSON.stringify(options), correct],
+      function(err) {
+        if (err) reject(err);
+        else resolve(this.lastID);
       }
+    );
+  });
+}
+
+export function updateAdminQuestion(id, category, type, question, options, correct) {
+  return new Promise((resolve, reject) => {
+    db.run(
+      'UPDATE questions SET category=?, type=?, question=?, options=?, correct=? WHERE id=?',
+      [category, type, question, JSON.stringify(options), correct, id],
+      function(err) {
+        if (err) reject(err);
+        else resolve(this.changes);
+      }
+    );
+  });
+}
+
+export function deleteAdminQuestion(id) {
+  return new Promise((resolve, reject) => {
+    db.run('DELETE FROM questions WHERE id=?', [id], function(err) {
+      if (err) reject(err);
+      else resolve(this.changes);
     });
   });
 }
@@ -75,10 +173,7 @@ export function getQuestions() {
   return new Promise((resolve, reject) => {
     db.all('SELECT * FROM questions', (err, rows) => {
       if (err) reject(err);
-      else resolve((rows || []).map(row => ({
-        ...row,
-        options: JSON.parse(row.options),
-      })));
+      else resolve((rows || []).map(row => ({ ...row, options: JSON.parse(row.options) })));
     });
   });
 }

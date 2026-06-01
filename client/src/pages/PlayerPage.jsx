@@ -9,10 +9,38 @@ import LogoBanner from '../components/LogoBanner';
 
 const socket = io(`http://${window.location.hostname}:3001`);
 
+// Auto-reconexión: si el socket se reconecta, reintenta unirse a la sala guardada
+socket.io.on('reconnect', () => {
+  const session = sessionStorage.getItem('triviaSession');
+  if (session) {
+    try { socket.emit('reconnect-room', JSON.parse(session)); } catch {}
+  }
+});
+
 const TOTAL_TICKS = 200; // 20 segundos en décimas
 
 const MC_COLORS = ['#e74c3c', '#2980b9', '#f39c12', '#27ae60'];
 const MC_SHAPES = ['▲', '◆', '●', '■'];
+
+// ── Audio & Haptic ───────────────────────────────────────
+function playTone(freq, duration, vol = 0.25) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(vol, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duration);
+  } catch {}
+}
+function soundSelect()  { playTone(440, 0.12, 0.15); }
+function soundCorrect() { playTone(523, 0.15); setTimeout(() => playTone(659, 0.25), 130); }
+function soundWrong()   { playTone(260, 0.35, 0.2); }
+function vibrate(ms)    { try { navigator.vibrate?.(ms); } catch {} }
 
 export default function PlayerPage() {
   const navigate = useNavigate();
@@ -20,7 +48,9 @@ export default function PlayerPage() {
 
   const [screen, setScreen]                   = useState('home');
   const [playerName, setPlayerName]           = useState('');
-  const [roomCode, setRoomCode]               = useState('');
+  const [roomCode, setRoomCode]               = useState(
+    () => new URLSearchParams(window.location.search).get('code') || ''
+  );
   const [joinedCode, setJoinedCode]           = useState('');
   const [players, setPlayers]                 = useState([]);
   const [currentQuestion, setCurrentQuestion] = useState(null);  // pregunta cruda (español)
@@ -64,8 +94,11 @@ export default function PlayerPage() {
 
     socket.on('question-results', ({ question, answers, scores }) => {
       const myAnswer = answers[socket.id];
+      const wasCorrect = myAnswer !== undefined && myAnswer.answer === question.correct;
+      if (wasCorrect) { soundCorrect(); vibrate([80, 40, 80]); }
+      else            { soundWrong();   vibrate([60, 30, 60, 30, 60]); }
       setLastResult({
-        wasCorrect:   myAnswer !== undefined && myAnswer.answer === question.correct,
+        wasCorrect,
         correctIndex: question.correct,
         myIndex:      myAnswer?.answer ?? null,
       });
@@ -151,17 +184,22 @@ export default function PlayerPage() {
 
   const handleJoin = () => {
     if (!playerName.trim() || !roomCode.trim()) return alert(t.alertNameRoom);
-    socket.emit('join-room', { roomCode: roomCode.toUpperCase(), playerName });
+    const code = roomCode.toUpperCase();
+    sessionStorage.setItem('triviaSession', JSON.stringify({ playerName, roomCode: code }));
+    socket.emit('join-room', { roomCode: code, playerName });
   };
 
   const handleAnswer = (idx) => {
     if (answered) return;
+    soundSelect();
+    vibrate(20);
     setSelectedAnswer(idx);
     setAnswered(true);
     socket.emit('answer', { answer: idx, timeLeft: timeLeft / 10 });
   };
 
   const handleBackHome = () => {
+    sessionStorage.removeItem('triviaSession');
     setScreen('home');
     setPlayerName('');
     setRoomCode('');

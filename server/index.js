@@ -1,8 +1,10 @@
+import 'dotenv/config';
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
-import { initDB, addQuestion, getQuestions } from './db.js';
+import { initDB, addQuestion, getQuestions, countQuestions, seedQuestions, getGameQuestions, getDistinctCategoryCount, clearQuestions } from './db.js';
+import adminRouter from './admin.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -14,8 +16,7 @@ const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
-
-initDB();
+app.use('/api/admin', adminRouter);
 
 const rooms = new Map();
 const socketToRoom = new Map();
@@ -116,13 +117,15 @@ app.post('/api/questions', async (req, res) => {
 io.on('connection', (socket) => {
   console.log(`Connected: ${socket.id}`);
 
-  socket.on('create-room', ({ playerName }) => {
+  socket.on('create-room', ({ playerName, maxPlayers }) => {
     const roomCode = generateRoomCode();
+    const limit = Math.min(Math.max(2, Number(maxPlayers) || 30), 100);
 
     const room = {
       code: roomCode,
       guide: { id: socket.id, name: playerName },
       players: [],
+      maxPlayers: limit,
       questions: [],
       gameState: 'waiting',
       currentQuestion: 0,
@@ -135,8 +138,8 @@ io.on('connection', (socket) => {
     socketToRoom.set(socket.id, roomCode);
     socket.join(roomCode);
 
-    socket.emit('room-created', { code: roomCode });
-    io.to(roomCode).emit('room-updated', { players: room.players, code: roomCode });
+    socket.emit('room-created', { code: roomCode, maxPlayers: limit });
+    io.to(roomCode).emit('room-updated', { players: room.players, code: roomCode, maxPlayers: limit });
   });
 
   socket.on('join-room', ({ roomCode, playerName }) => {
@@ -150,28 +153,39 @@ io.on('connection', (socket) => {
       socket.emit('error', { message: 'La partida ya comenzó' });
       return;
     }
+    if (room.players.length >= room.maxPlayers) {
+      socket.emit('error', { message: `La sala está llena (máx. ${room.maxPlayers} jugadores)` });
+      return;
+    }
 
     room.players.push({ id: socket.id, name: playerName, score: 0 });
     socketToRoom.set(socket.id, roomCode);
     socket.join(roomCode);
 
     socket.emit('joined-room', { code: roomCode });
-    io.to(roomCode).emit('room-updated', { players: room.players, code: roomCode });
+    io.to(roomCode).emit('room-updated', { players: room.players, code: roomCode, maxPlayers: room.maxPlayers });
     console.log(`${playerName} joined ${roomCode}`);
   });
 
-  socket.on('start-game', ({ categories } = {}) => {
+  socket.on('start-game', async ({ categories } = {}) => {
     const roomCode = socketToRoom.get(socket.id);
     const room = rooms.get(roomCode);
 
     if (!room || room.guide.id !== socket.id || room.players.length === 0) return;
 
     const cats = Array.isArray(categories) && categories.length > 0 ? categories : null;
-    const pool = cats ? QUESTIONS.filter(q => cats.includes(q.category)) : QUESTIONS;
+
+    let pool;
+    try {
+      const allQ = await getGameQuestions();
+      pool = cats ? allQ.filter(q => cats.includes(q.category)) : allQ;
+    } catch (err) {
+      console.error('Error loading questions from DB:', err);
+      return;
+    }
 
     if (pool.length === 0) return;
 
-    // Mezclar y tomar hasta 12 preguntas al azar
     const selected = shuffle(pool).slice(0, 12);
 
     room.questions = selected;
@@ -195,9 +209,34 @@ io.on('connection', (socket) => {
     room.answers[socket.id] = { answer, timeLeft };
     io.to(roomCode).emit('player-answered', { playerId: socket.id });
 
-    if (Object.keys(room.answers).length === room.players.length) {
-      processQuestion(room, roomCode);
+    checkAllAnswered(room, roomCode);
+  });
+
+  socket.on('reconnect-room', ({ playerName, roomCode }) => {
+    const room = rooms.get(roomCode);
+    if (!room) { socket.emit('error', { message: 'Sala no encontrada' }); return; }
+
+    const player = room.players.find(p => p.name === playerName);
+    if (!player) { socket.emit('error', { message: 'No se encontró tu sesión' }); return; }
+
+    const oldId = player.id;
+    player.id = socket.id;
+    player.connected = true;
+    socketToRoom.delete(oldId);
+    socketToRoom.set(socket.id, roomCode);
+    socket.join(roomCode);
+
+    if (room.gameState === 'waiting') {
+      socket.emit('joined-room', { code: roomCode });
+      io.to(roomCode).emit('room-updated', { players: room.players, code: roomCode, maxPlayers: room.maxPlayers });
+    } else if (room.gameState === 'playing') {
+      socket.emit('game-started', {
+        players: room.players,
+        question: room.questions[room.currentQuestion],
+        totalQuestions: room.questions.length,
+      });
     }
+    console.log(`${playerName} reconnected to ${roomCode}`);
   });
 
   socket.on('question-timeout', () => {
@@ -216,9 +255,15 @@ io.on('connection', (socket) => {
         if (room.guide.id === socket.id) {
           rooms.delete(roomCode);
           io.to(roomCode).emit('room-closed', { message: 'El guía se desconectó' });
+        } else if (room.gameState === 'playing') {
+          // Durante el juego: marcar desconectado (no eliminar) para permitir reconexión
+          const player = room.players.find(p => p.id === socket.id);
+          if (player) player.connected = false;
+          // Si todos los conectados ya respondieron, avanzar
+          checkAllAnswered(room, roomCode);
         } else {
           room.players = room.players.filter(p => p.id !== socket.id);
-          io.to(roomCode).emit('room-updated', { players: room.players, code: roomCode });
+          io.to(roomCode).emit('room-updated', { players: room.players, code: roomCode, maxPlayers: room.maxPlayers });
         }
       }
     }
@@ -226,6 +271,14 @@ io.on('connection', (socket) => {
     console.log(`Disconnected: ${socket.id}`);
   });
 });
+
+function checkAllAnswered(room, roomCode) {
+  if (room.processingQuestion) return;
+  const connected = room.players.filter(p => p.connected !== false).length;
+  if (connected === 0 || Object.keys(room.answers).length >= connected) {
+    processQuestion(room, roomCode);
+  }
+}
 
 function processQuestion(room, roomCode) {
   room.processingQuestion = true;
@@ -278,6 +331,30 @@ function generateRoomCode() {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
-httpServer.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+// Limpia salas inactivas cada 30 minutos
+setInterval(() => {
+  const TWO_HOURS = 2 * 60 * 60 * 1000;
+  const now = Date.now();
+  for (const [code, room] of rooms.entries()) {
+    if (now - room.createdAt > TWO_HOURS) {
+      rooms.delete(code);
+      console.log(`Cleaned up stale room: ${code}`);
+    }
+  }
+}, 30 * 60 * 1000);
+
+initDB().then(async () => {
+  const count = await countQuestions();
+  const catCount = count > 0 ? await getDistinctCategoryCount() : 0;
+  if (count === 0 || catCount < 4) {
+    if (count > 0) await clearQuestions();
+    await seedQuestions(QUESTIONS);
+    console.log(`Seeded ${QUESTIONS.length} questions into SQLite`);
+  }
+  httpServer.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}).catch(err => {
+  console.error('Failed to initialize DB:', err);
+  process.exit(1);
 });

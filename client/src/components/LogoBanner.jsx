@@ -35,6 +35,15 @@ export default function LogoBanner() {
   }, []);
 
   return (
+    <>
+      {/* Tapa el notch/Dynamic Island con el mismo color del banner */}
+      <div style={{
+        position: 'fixed',
+        top: 0, left: 0, right: 0,
+        height: 8,
+        background: '#111111',
+        zIndex: 999,
+      }} />
     <div
       style={{
         width: "100%",
@@ -58,7 +67,8 @@ export default function LogoBanner() {
         }}
       />
 
-      
+
     </div>
+    </>
   );
 }

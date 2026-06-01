@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import { useNavigate } from 'react-router-dom';
+import QRCode from 'react-qr-code';
 import { CATEGORIES, getTheme } from '../config/categories';
 import { useLanguage } from '../context/LanguageContext';
 import LangSwitcher from '../components/LangSwitcher';
+import LogoBanner from '../components/LogoBanner';
 import { translateQuestion } from '../services/translator';
 
 const socket = io(`http://${window.location.hostname}:3001`);
@@ -13,25 +15,30 @@ export default function GuidePage() {
   const { lang, t } = useLanguage();
 
   const [screen, setScreen]                     = useState('setup');
-  const [guideName, setGuideName]               = useState('');
+  const [maxPlayers, setMaxPlayers]             = useState(30);
   const [roomCode, setRoomCode]                 = useState('');
+  const [roomMaxPlayers, setRoomMaxPlayers]     = useState(30);
   const [players, setPlayers]                   = useState([]);
   const [selectedCategories, setSelectedCategories] = useState(new Set());
   const [scores, setScores]                     = useState([]);
   const [answeredIds, setAnsweredIds]           = useState(new Set());
-  const [currentQuestion, setCurrentQuestion]   = useState(null); // cruda (español)
-  const [displayQuestion, setDisplayQuestion]   = useState(null); // traducida
+  const [currentQuestion, setCurrentQuestion]   = useState(null);
+  const [displayQuestion, setDisplayQuestion]   = useState(null);
   const [questionIdx, setQuestionIdx]           = useState(0);
   const [totalQuestions, setTotalQuestions]     = useState(0);
   const [leaderboard, setLeaderboard]           = useState([]);
 
   useEffect(() => {
-    socket.on('room-created', ({ code }) => {
+    socket.on('room-created', ({ code, maxPlayers: max }) => {
       setRoomCode(code);
+      setRoomMaxPlayers(max);
       setScreen('waitingRoom');
     });
 
-    socket.on('room-updated', ({ players: p }) => setPlayers(p || []));
+    socket.on('room-updated', ({ players: p, maxPlayers: max }) => {
+      setPlayers(p || []);
+      if (max) setRoomMaxPlayers(max);
+    });
 
     socket.on('game-started', ({ players: p, question, totalQuestions: total }) => {
       setScores(p.map(pl => ({ id: pl.id, name: pl.name, score: 0 })));
@@ -73,9 +80,15 @@ export default function GuidePage() {
     };
   }, []);
 
+  // Habilitar scroll en pantallas del guía (sala de espera, scoreboard)
+  useEffect(() => {
+    if (screen === 'setup') return;
+    document.body.style.overflowY = 'auto';
+    return () => { document.body.style.overflowY = ''; };
+  }, [screen]);
+
   const handleCreate = () => {
-    if (!guideName.trim()) return alert(t.alertName);
-    socket.emit('create-room', { playerName: guideName });
+    socket.emit('create-room', { playerName: 'Guía', maxPlayers });
   };
 
   const toggleCategory = (key) => {
@@ -93,7 +106,6 @@ export default function GuidePage() {
 
   const handleReset = () => {
     setScreen('setup');
-    setGuideName('');
     setRoomCode('');
     setPlayers([]);
     setSelectedCategories(new Set());
@@ -103,16 +115,10 @@ export default function GuidePage() {
     setLeaderboard([]);
   };
 
-  // Muestra la pregunta inmediatamente y traduce en segundo plano
   useEffect(() => {
     if (!currentQuestion) { setDisplayQuestion(null); return; }
-
-    // Transición instantánea: muestra el texto original sin esperar la API
     setDisplayQuestion(currentQuestion);
-
     if (lang === 'es') return;
-
-    // Traducción en fondo: actualiza el texto cuando llega (sin bloquear)
     let cancelled = false;
     translateQuestion(currentQuestion, lang).then(translated => {
       if (!cancelled) setDisplayQuestion(translated);
@@ -120,12 +126,14 @@ export default function GuidePage() {
     return () => { cancelled = true; };
   }, [currentQuestion, lang]);
 
-  // En el scoreboard el tema refleja la categoría de la pregunta actual
   const theme = getTheme(currentQuestion?.category);
+  const joinUrl = `${window.location.origin}/?code=${roomCode}`;
 
   // ── SETUP ───────────────────────────────────────────────
   if (screen === 'setup') {
     return (
+      <>
+      <LogoBanner />
       <div className="container home">
         <nav className="page-nav">
           <button className="page-nav-btn" onClick={() => navigate('/')}>
@@ -149,26 +157,41 @@ export default function GuidePage() {
         <img src="/logo-pct.png" alt="Trivia Game" className="logo" />
         <LangSwitcher />
         <div className="home-form">
-          <input className="input" placeholder={t.namePlaceholder} value={guideName}
-            onChange={e => setGuideName(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleCreate()} />
+          <div className="max-players-row">
+            <label className="max-players-label">Máx. jugadores</label>
+            <div className="max-players-stepper">
+              <button className="stepper-btn" onClick={() => setMaxPlayers(v => Math.max(2, v - 1))}>−</button>
+              <span className="stepper-value">{maxPlayers}</span>
+              <button className="stepper-btn" onClick={() => setMaxPlayers(v => Math.min(100, v + 1))}>+</button>
+            </div>
+          </div>
+
           <button className="btn btn-primary" onClick={handleCreate}>{t.createRoomBtn}</button>
         </div>
       </div>
+      </>
     );
   }
 
   // ── WAITING ROOM ─────────────────────────────────────────
   if (screen === 'waitingRoom') {
+    const isFull = players.length >= roomMaxPlayers;
     return (
+      <>
+      <LogoBanner />
       <div className="container">
         <h2>{t.roomCreated}</h2>
+
+        {/* Código + QR */}
         <div className="code-box">{roomCode}</div>
+        <div className="qr-wrapper">
+          <QRCode value={joinUrl} size={160} />
+        </div>
         <p className="hint-text" style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
           {t.shareCode}
         </p>
 
-        {/* Selector de categorías (multi) */}
+        {/* Categorías */}
         <p style={{ fontSize: 13, color: '#666', marginBottom: '0.75rem', fontWeight: 600 }}>
           {t.chooseCategories}
           {selectedCategories.size > 0 && (
@@ -187,19 +210,27 @@ export default function GuidePage() {
             >
               <span className="cat-icon">{cat.icon}</span>
               <span className="cat-label">{cat.label}</span>
-              {selectedCategories.has(key) && (
-                <span className="cat-check">✓</span>
-              )}
+              {selectedCategories.has(key) && <span className="cat-check">✓</span>}
             </button>
           ))}
         </div>
 
-        {/* Jugadores */}
+        {/* Jugadores con indicador de límite */}
         <div className="players-list" style={{ marginTop: '1.5rem' }}>
-          <p>{t.connectedPlayers(players.length)}</p>
+          <p style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>{t.connectedPlayers(players.length)}</span>
+            <span className={`players-limit-badge${isFull ? ' full' : ''}`}>
+              {players.length} / {roomMaxPlayers}
+            </span>
+          </p>
           {players.length === 0 && (
             <p style={{ color: '#aaa', fontSize: 14, padding: '8px 0' }}>
               {t.waitingPlayers}
+            </p>
+          )}
+          {isFull && (
+            <p style={{ color: '#e74c3c', fontSize: 13, marginBottom: '0.5rem' }}>
+              Sala completa — no se aceptan más jugadores
             </p>
           )}
           {players.map(p => (
@@ -225,6 +256,7 @@ export default function GuidePage() {
                 )}
         </button>
       </div>
+      </>
     );
   }
 
@@ -235,6 +267,8 @@ export default function GuidePage() {
     const total         = scores.length;
 
     return (
+      <>
+      <LogoBanner />
       <div className="guide-scoreboard">
         <div className="scoreboard-header">
           <span className="q-counter" style={{ color: theme.headerColor }}>
@@ -268,6 +302,7 @@ export default function GuidePage() {
           ))}
         </div>
       </div>
+      </>
     );
   }
 
@@ -275,6 +310,8 @@ export default function GuidePage() {
   if (screen === 'finalLeaderboard') {
     const medals = ['🥇', '🥈', '🥉'];
     return (
+      <>
+      <LogoBanner />
       <div className="guide-scoreboard">
         <h1 style={{ textAlign: 'center', marginBottom: '2rem' }}>
           {theme.icon} {t.finalResultsTitle} — {theme.label}
@@ -295,6 +332,7 @@ export default function GuidePage() {
           {t.newGame}
         </button>
       </div>
+      </>
     );
   }
 

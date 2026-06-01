@@ -6,6 +6,7 @@ import LogoBanner from "./components/LogoBanner";
 
 const GuidePage = lazy(() => import('./pages/GuidePage'));
 const PlayerPage = lazy(() => import('./pages/PlayerPage'));
+const AdminPage = lazy(() => import('./pages/AdminPage'));
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<PlayerPage />} />
             <Route path="/guide" element={<GuidePage />} />
+            <Route path="/admin" element={<AdminPage />} />
           </Routes>
         </Suspense>
     </BrowserRouter>
