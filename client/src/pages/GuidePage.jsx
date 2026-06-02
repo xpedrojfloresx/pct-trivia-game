@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import { useNavigate } from 'react-router-dom';
-import QRCode from 'react-qr-code';
+import { QRCode } from 'react-qr-code';
 import { CATEGORIES, getTheme } from '../config/categories';
 import { useLanguage } from '../context/LanguageContext';
 import LangSwitcher from '../components/LangSwitcher';
