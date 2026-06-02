@@ -6,6 +6,7 @@ import { useLanguage } from '../context/LanguageContext';
 import LangSwitcher from '../components/LangSwitcher';
 import { translateQuestion } from '../services/translator';
 import LogoBanner from '../components/LogoBanner';
+import CountdownScreen from '../components/CountdownScreen';
 
 const socket = io(`http://${window.location.hostname}:3001`);
 
@@ -70,6 +71,7 @@ export default function PlayerPage() {
   const [emailSent, setEmailSent]           = useState(false);
   const [privacyChecked, setPrivacyChecked] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [pendingGame, setPendingGame] = useState(null);
 
   useEffect(() => {
     socket.on('joined-room', ({ code }) => {
@@ -89,7 +91,7 @@ export default function PlayerPage() {
       setLastResult(null);
       setMyScore(0);
       timeoutSentRef.current = false;
-      setScreen('gameplay');
+      setScreen('countdown');
     });
 
     socket.on('question-results', ({ question, answers, scores }) => {
@@ -213,6 +215,10 @@ export default function PlayerPage() {
     setLeaderboard([]);
   };
 
+  const handleCountdownComplete = () => {
+    setScreen('gameplay');
+  };
+
   // ── HOME ────────────────────────────────────────────────
   if (screen === 'home') {
     return (
@@ -286,6 +292,10 @@ export default function PlayerPage() {
         </div>
       </>
     );
+  }
+
+  if (screen === 'countdown') {
+    return <CountdownScreen lang={lang} onComplete={handleCountdownComplete} />;
   }
 
   // ── GAMEPLAY ─────────────────────────────────────────────
