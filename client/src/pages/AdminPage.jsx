@@ -5,7 +5,8 @@ const TF_OPTIONS = ['Verdadero', 'Falso'];
 const EMPTY_FORM = { category: 'FUEGO', type: 'mc', question: '', options: ['', '', '', ''], correct: 0 };
 
 function apiBase() {
-  return `http://${window.location.hostname}:3001/api/admin`;
+  const base = import.meta.env.VITE_SERVER_URL || window.location.origin;
+  return `${base}/api/admin`;
 }
 
 export default function AdminPage() {

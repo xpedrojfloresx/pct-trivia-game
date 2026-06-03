@@ -3,8 +3,13 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { initDB, addQuestion, getQuestions, countQuestions, seedQuestions, getGameQuestions, getDistinctCategoryCount, clearQuestions } from './db.js';
 import adminRouter from './admin.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const httpServer = createServer(app);
@@ -112,6 +117,13 @@ app.post('/api/questions', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// Serve React app in production
+if (process.env.NODE_ENV === 'production') {
+  const clientDist = path.join(__dirname, '../client/dist');
+  app.use(express.static(clientDist));
+  app.get('*', (_req, res) => res.sendFile(path.join(clientDist, 'index.html')));
+}
 
 // WebSocket
 io.on('connection', (socket) => {

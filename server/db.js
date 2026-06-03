@@ -1,14 +1,18 @@
 import sqlite3 from 'sqlite3';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dbPath = path.join(__dirname, 'data', 'trivia.db');
+// DATA_PATH can be set to a Railway volume mount (e.g. /data). Falls back to local server/data/
+const dataDir = process.env.DATA_PATH || path.join(__dirname, 'data');
+const dbPath = path.join(dataDir, 'trivia.db');
 
 let db;
 
 export function initDB() {
   return new Promise((resolve, reject) => {
+    fs.mkdirSync(path.dirname(dbPath), { recursive: true });
     db = new sqlite3.Database(dbPath, (err) => {
       if (err) { console.error('Error opening DB:', err); reject(err); return; }
       console.log(`Connected to SQLite at ${dbPath}`);

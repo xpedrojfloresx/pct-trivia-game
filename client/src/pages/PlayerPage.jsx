@@ -8,7 +8,8 @@ import { translateQuestion } from '../services/translator';
 import LogoBanner from '../components/LogoBanner';
 import CountdownScreen from '../components/CountdownScreen';
 
-const socket = io(`http://${window.location.hostname}:3001`);
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || window.location.origin;
+const socket = io(SERVER_URL);
 
 // Auto-reconexión: si el socket se reconecta, reintenta unirse a la sala guardada
 socket.io.on('reconnect', () => {
