@@ -5,6 +5,10 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import { initDB, addQuestion, getQuestions, countQuestions, seedQuestions, getGameQuestions, getDistinctCategoryCount, clearQuestions } from './db.js';
 import adminRouter from './admin.js';
+import { fileURLToPath } from 'url';
+import { join, dirname } from 'path';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname  = dirname(__filename);
 
 const app = express();
 const httpServer = createServer(app);
@@ -342,6 +346,13 @@ setInterval(() => {
     }
   }
 }, 30 * 60 * 1000);
+
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(join(__dirname, '../client/dist')));
+  app.get('*', (req, res) => {
+    res.sendFile(join(__dirname, '../client/dist/index.html'));
+  });
+}
 
 initDB().then(async () => {
   const count = await countQuestions();

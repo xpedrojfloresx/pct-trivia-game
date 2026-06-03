@@ -8,7 +8,7 @@ import LangSwitcher from '../components/LangSwitcher';
 import LogoBanner from '../components/LogoBanner';
 import { translateQuestion } from '../services/translator';
 
-const socket = io(`http://${window.location.hostname}:3001`);
+const socket = io(import.meta.env.VITE_SOCKET_URL || window.location.origin);
 
 export default function GuidePage() {
   const navigate = useNavigate();
